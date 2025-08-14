@@ -1,5 +1,5 @@
 discord.py==2.3.2
-yt-dlp
+yt-dlp 2025.08.11
 ffmpeg-python
 aiohttp
 requests
