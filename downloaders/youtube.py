@@ -1,8 +1,8 @@
 import yt_dlp
 import os
 import base64
+import re
 
-# Cargar cookies si existen
 cookies_base64 = os.getenv("COOKIES_TXT_BASE64")
 if cookies_base64:
     with open("cookies.txt", "wb") as f:
@@ -10,10 +10,21 @@ if cookies_base64:
 else:
     print("⚠️ No se encontró COOKIES_TXT_BASE64")
 
-def download(url):
-    output_path = "/tmp/youtube_audio.%(ext)s"
+def sanitize_filename(name):
+    return re.sub(r'[\\/*?:"<>|]', "", name)
 
-    # 🎯 Configuración principal: prioriza M4A, convierte a MP3 320 kbps
+def download(url):
+    info_opts = {
+        'quiet': True,
+        'cookiefile': 'cookies.txt',
+    }
+    # Obtener info primero
+    with yt_dlp.YoutubeDL(info_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        title = sanitize_filename(info.get('title', 'audio'))
+    
+    output_path = f"/tmp/{title}.%(ext)s"
+
     ydl_opts_primary = {
         'format': 'bestaudio[ext=m4a]/bestaudio',
         'outtmpl': output_path,
@@ -30,21 +41,13 @@ def download(url):
             ydl.download([url])
     except Exception as e:
         print(f"⚠ Error con M4A: {e}, usando formato alternativo...")
-        ydl_opts_fallback = {
-            'format': 'bestaudio',
-            'outtmpl': output_path,
-            'cookiefile': 'cookies.txt',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '320',
-            }]
-        }
+        ydl_opts_fallback = ydl_opts_primary.copy()
+        ydl_opts_fallback['format'] = 'bestaudio'
         with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
             ydl.download([url])
 
-    mp3_path = output_path.replace(".%(ext)s", ".mp3")
-    return mp3_path, os.path.basename(mp3_path)
+    mp3_path = f"/tmp/{title}.mp3"
+    return mp3_path, f"{title}.mp3"
 
 
 def download_video(url):
