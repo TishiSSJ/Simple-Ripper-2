@@ -1,0 +1,6 @@
+discord.py==2.3.2
+yt-dlp
+ffmpeg-python
+aiohttp
+requests
+httpx
